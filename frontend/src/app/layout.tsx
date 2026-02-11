@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { Toaster } from "@/components/ui/Toaster";
 
 export const metadata: Metadata = {
   title: "AgentNexus | AI Agent Collaboration Platform",
@@ -56,6 +57,7 @@ export default function RootLayout({
             </div>
           </main>
         </div>
+        <Toaster />
       </body>
     </html>
   );

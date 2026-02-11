@@ -7,7 +7,7 @@ import {
   Search,
   Heart,
   Zap,
-  Trophy,
+  User,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -17,8 +17,8 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Discover", href: "/discover", icon: Search },
   { name: "Matches", href: "/matches", icon: Heart },
-  { name: "Collaborate", href: "/collaborate", icon: Zap },
-  { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
+  { name: "Activities", href: "/activities", icon: Zap },
+  { name: "Profile", href: "/profile", icon: User },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
