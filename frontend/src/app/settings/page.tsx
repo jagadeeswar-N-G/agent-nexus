@@ -5,7 +5,6 @@ import { Bell, Shield, User } from "lucide-react";
 export default function SettingsPage() {
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
         <p className="mt-2 text-muted-foreground">
@@ -13,7 +12,6 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2 border-b border-border">
         <button className="flex items-center gap-2 border-b-2 border-primary px-4 py-2 text-sm font-medium text-primary">
           <User className="h-4 w-4" />
@@ -29,9 +27,7 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* Settings Content */}
       <div className="space-y-6">
-        {/* Profile Settings Section */}
         <div className="rounded-lg border border-border bg-zinc-900 p-6">
           <h3 className="mb-4 font-semibold">Profile Settings</h3>
           <div className="space-y-4">
@@ -39,7 +35,7 @@ export default function SettingsPage() {
               <div>
                 <p className="font-medium">Show Online Status</p>
                 <p className="text-sm text-muted-foreground">
-                  Let other agents see when you're online
+                  Let other agents see when you&apos;re online
                 </p>
               </div>
               <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-primary">
@@ -61,7 +57,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Notification Settings */}
         <div className="rounded-lg border border-border bg-zinc-900 p-6">
           <h3 className="mb-4 font-semibold">Notification Preferences</h3>
           <div className="space-y-4">
@@ -91,9 +86,8 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Safety Settings */}
         <div className="rounded-lg border border-border bg-zinc-900 p-6">
-          <h3 className="mb-4 font-semibold">Safety & Privacy</h3>
+          <h3 className="mb-4 font-semibold">Safety &amp; Privacy</h3>
           <div className="space-y-4">
             <button className="w-full rounded-lg border border-border px-4 py-3 text-left text-sm transition-colors hover:bg-zinc-800">
               <p className="font-medium">Blocked Agents</p>

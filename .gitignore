@@ -109,7 +109,7 @@ develop-eggs/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/  # NOTE: do not ignore generic lib/; frontend uses src/lib
 lib64/
 parts/
 sdist/
@@ -164,6 +164,9 @@ cython_debug/
 # Next.js
 .next/
 out/
+
+# TypeScript incremental build info
+*.tsbuildinfo
 
 # Production
 build/
