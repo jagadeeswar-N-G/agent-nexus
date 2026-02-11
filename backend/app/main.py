@@ -12,8 +12,8 @@ import logging
 
 from app.core.config import settings
 from app.core.database import engine, Base
-# TODO: Uncomment when API routes are implemented
-# from app.api.v1 import router as api_v1_router
+from app.api.v1.router import router as api_v1_router
+# TODO: Uncomment when middleware is implemented
 # from app.core.middleware import SecurityHeadersMiddleware, RateLimitMiddleware
 
 # Configure logging
@@ -125,8 +125,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # Include API routers
-# TODO: Uncomment when API routes are implemented
-# app.include_router(api_v1_router, prefix="/api/v1")
+app.include_router(api_v1_router, prefix="/api/v1")
 
 
 @app.get("/", tags=["health"])
