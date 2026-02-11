@@ -1,37 +1,73 @@
 """
-Authentication Endpoints
-MVP: Token-based auth with structure for Ed25519 signature auth
+Authentication Endpoints - Ed25519 Cryptographic Auth
+Agents authenticate using Ed25519 signatures, not passwords
 """
-from fastapi import APIRouter, Depends, HTTPException, Response, Cookie
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from typing import Optional
-import secrets
-import hashlib
-from datetime import datetime, timedelta
+from typing import Optional, List
+import base64
+from datetime import datetime
 
 from app.core.database import get_db
+from app.core.security import (
+    generate_challenge,
+    store_challenge,
+    get_challenge,
+    verify_ed25519_signature,
+    create_access_token,
+    verify_token,
+    refresh_access_token
+)
 from app.models.agent import Agent, AgentStatus
 from pydantic import BaseModel
 
 router = APIRouter()
 security = HTTPBearer(auto_error=False)
 
-# In-memory token store (replace with Redis in production)
-_active_tokens: dict[str, str] = {}  # {token: agent_id}
 
-class LoginRequest(BaseModel):
-    """MVP: Simple token login"""
-    token: str
-    # Future: signature: str, timestamp: int, public_key: str
+# ═══════════════════════════════════════════════════════════════
+# REQUEST/RESPONSE MODELS
+# ═══════════════════════════════════════════════════════════════
+
+class ChallengeRequest(BaseModel):
+    """Request a challenge for authentication"""
+    public_key: str  # Base64-encoded Ed25519 public key
+
+
+class ChallengeResponse(BaseModel):
+    """Challenge for signature"""
+    challenge: str  # Base64-encoded challenge
+    expires_in: int  # Seconds until expiry
+
+
+class AgentData(BaseModel):
+    """Agent registration data"""
+    display_name: str
+    runtime_type: Optional[str] = "custom"
+    skills: List[str] = []
+    bio: Optional[str] = None
+
+
+class VerifyRequest(BaseModel):
+    """Verify signature and authenticate"""
+    public_key: str  # Base64-encoded public key
+    signature: str   # Base64-encoded signature of challenge
+    agent_data: Optional[AgentData] = None  # For new registrations
+
 
 class TokenResponse(BaseModel):
     """Auth token response"""
-    access_token: str
-    token_type: str = "bearer"
-    agent_id: str
-    profile_complete: bool
+    token: str
+    agent: dict
+    is_new: bool  # True if this was a new registration
+
+
+class RefreshRequest(BaseModel):
+    """Refresh token request"""
+    token: str
+
 
 class AgentSummary(BaseModel):
     """Current agent summary"""
@@ -43,32 +79,22 @@ class AgentSummary(BaseModel):
     profile_complete: bool
     reputation_score: float
 
-def generate_token() -> str:
-    """Generate secure random token"""
-    return secrets.token_urlsafe(32)
 
-def hash_token(token: str) -> str:
-    """Hash token for lookup (MVP uses unhashed, production should hash)"""
-    return hashlib.sha256(token.encode()).hexdigest()
+# ═══════════════════════════════════════════════════════════════
+# DEPENDENCY: GET CURRENT AGENT
+# ═══════════════════════════════════════════════════════════════
 
 async def get_current_agent(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    token_cookie: Optional[str] = Cookie(None, alias="auth_token"),
     db: AsyncSession = Depends(get_db)
 ) -> Agent:
-    """Dependency to get current authenticated agent"""
-    # Try bearer token first, then cookie
-    token = None
-    if credentials:
-        token = credentials.credentials
-    elif token_cookie:
-        token = token_cookie
-
-    if not token:
+    """Dependency to get current authenticated agent from JWT"""
+    if not credentials:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    # Lookup agent by token
-    agent_id = _active_tokens.get(token)
+    token = credentials.credentials
+    agent_id = verify_token(token)
+
     if not agent_id:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
@@ -84,56 +110,112 @@ async def get_current_agent(
     if agent.status == AgentStatus.BANNED:
         raise HTTPException(status_code=403, detail="Agent account is banned")
 
+    # Update last seen
+    agent.last_seen_at = datetime.utcnow()
+    await db.commit()
+
     return agent
 
-@router.post("/login", response_model=TokenResponse)
-async def login(
-    request: LoginRequest,
-    response: Response,
+
+# ═══════════════════════════════════════════════════════════════
+# ENDPOINTS
+# ═══════════════════════════════════════════════════════════════
+
+@router.post("/challenge", response_model=ChallengeResponse)
+async def request_challenge(request: ChallengeRequest):
+    """
+    Step 1: Request a challenge to sign
+
+    The agent provides their public key and receives a random challenge.
+    They must sign this challenge with their private key and submit to /verify
+    """
+    # Generate random challenge
+    challenge = generate_challenge()
+
+    # Store with 5-minute expiry
+    store_challenge(request.public_key, challenge, ttl_seconds=300)
+
+    # Return base64-encoded challenge
+    challenge_b64 = base64.b64encode(challenge).decode('utf-8')
+
+    return ChallengeResponse(
+        challenge=challenge_b64,
+        expires_in=300
+    )
+
+
+@router.post("/verify", response_model=TokenResponse)
+async def verify_and_authenticate(
+    request: VerifyRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """
-    MVP Login: Accept a token and create session
-    Auto-registers new agents on first login (MVP simplification)
+    Step 2: Verify signature and authenticate
 
-    For MVP: token is just a unique identifier (e.g., agent_id)
-    Production: Verify Ed25519 signature
+    The agent submits their signed challenge. If valid:
+    - New agents: register with provided data
+    - Existing agents: log in
+
+    Returns JWT token for subsequent requests
     """
-    # MVP: Use token as agent_id directly
-    # TODO: Implement Ed25519 signature verification
-    agent_id = request.token
+    # Get stored challenge
+    challenge = get_challenge(request.public_key)
 
-    # Find or create agent
+    if challenge is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Challenge not found or expired. Please request a new challenge."
+        )
+
+    # Verify signature
+    is_valid = verify_ed25519_signature(
+        public_key_b64=request.public_key,
+        message=challenge,
+        signature_b64=request.signature
+    )
+
+    if not is_valid:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid signature. Authentication failed."
+        )
+
+    # Signature is valid! Now find or create agent
+    # Use public key as agent_id
+    agent_id = request.public_key
+
     result = await db.execute(
         select(Agent).where(Agent.agent_id == agent_id)
     )
     agent = result.scalar_one_or_none()
 
+    is_new = False
+
     if not agent:
-        # Auto-register new agent (MVP: just-in-time registration)
+        # New agent - register
+        if not request.agent_data:
+            raise HTTPException(
+                status_code=400,
+                detail="Agent data required for new registrations"
+            )
+
         agent = Agent(
             agent_id=agent_id,
-            display_name=f"Agent-{agent_id[:8]}",  # Temporary name
-            public_key=agent_id,  # MVP: use agent_id as placeholder
-            status=AgentStatus.PENDING
+            public_key=request.public_key,
+            display_name=request.agent_data.display_name,
+            runtime_type=request.agent_data.runtime_type,
+            skills=request.agent_data.skills,
+            bio=request.agent_data.bio,
+            status=AgentStatus.PENDING,
+            last_seen_at=datetime.utcnow()
         )
         db.add(agent)
         await db.commit()
         await db.refresh(agent)
+        is_new = True
 
-    # Generate session token
-    session_token = generate_token()
-    _active_tokens[session_token] = agent_id
-
-    # Set HttpOnly cookie (more secure than localStorage)
-    response.set_cookie(
-        key="auth_token",
-        value=session_token,
-        httponly=True,
-        secure=False,  # Set to True in production with HTTPS
-        samesite="lax",
-        max_age=7 * 24 * 60 * 60  # 7 days
-    )
+    # Generate JWT token
+    token = create_access_token(agent_id)
 
     # Check profile completeness
     profile_complete = bool(
@@ -144,10 +226,37 @@ async def login(
     )
 
     return TokenResponse(
-        access_token=session_token,
-        agent_id=agent_id,
-        profile_complete=profile_complete
+        token=token,
+        agent={
+            "agent_id": agent.agent_id,
+            "display_name": agent.display_name,
+            "handle": agent.handle,
+            "avatar_url": agent.avatar_url,
+            "status": agent.status.value,
+            "profile_complete": profile_complete,
+            "reputation_score": agent.reputation_score
+        },
+        is_new=is_new
     )
+
+
+@router.post("/refresh", response_model=dict)
+async def refresh_token(request: RefreshRequest):
+    """
+    Refresh an access token (rolling refresh)
+
+    Submit old token, get new token if still valid
+    """
+    new_token = refresh_access_token(request.token)
+
+    if new_token is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token"
+        )
+
+    return {"token": new_token}
+
 
 @router.get("/me", response_model=AgentSummary)
 async def get_current_user(
@@ -171,57 +280,13 @@ async def get_current_user(
         reputation_score=agent.reputation_score
     )
 
+
 @router.post("/logout")
-async def logout(
-    response: Response,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    token_cookie: Optional[str] = Cookie(None, alias="auth_token")
-):
-    """Logout and invalidate session"""
-    token = credentials.credentials if credentials else token_cookie
-
-    if token and token in _active_tokens:
-        del _active_tokens[token]
-
-    # Clear cookie
-    response.delete_cookie(key="auth_token")
-
-    return {"message": "Logged out successfully"}
-
-@router.post("/register")
-async def register_agent(
-    display_name: str,
-    public_key: str,
-    db: AsyncSession = Depends(get_db)
-):
+async def logout():
     """
-    Register a new agent (MVP simplified)
+    Logout (client-side only)
+
+    Since we use stateless JWT tokens, logout is handled client-side
+    by discarding the token. No server-side session to invalidate.
     """
-    # Generate agent_id from public key
-    agent_id = hashlib.sha256(public_key.encode()).hexdigest()[:16]
-
-    # Check if agent exists
-    result = await db.execute(
-        select(Agent).where(Agent.agent_id == agent_id)
-    )
-    existing = result.scalar_one_or_none()
-
-    if existing:
-        raise HTTPException(status_code=400, detail="Agent already registered")
-
-    # Create new agent
-    new_agent = Agent(
-        agent_id=agent_id,
-        display_name=display_name,
-        public_key=public_key,
-        status=AgentStatus.PENDING
-    )
-
-    db.add(new_agent)
-    await db.commit()
-    await db.refresh(new_agent)
-
-    return {
-        "agent_id": agent_id,
-        "message": "Agent registered successfully. Please complete your profile."
-    }
+    return {"message": "Logged out successfully. Please discard your token."}
