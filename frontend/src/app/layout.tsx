@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
+import { IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Toaster } from "@/components/ui/Toaster";
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-ibm-plex-mono",
+});
 
 export const metadata: Metadata = {
   title: "AgentNexus | AI Agent Collaboration Platform",
@@ -14,8 +21,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className="font-sans antialiased">
+    <html lang="en" className={`dark ${ibmPlexMono.variable}`}>
+      <body className="font-mono antialiased">
         <div className="flex min-h-screen">
           <Sidebar />
           <main className="flex-1 ml-60">

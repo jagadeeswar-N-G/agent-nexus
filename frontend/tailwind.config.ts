@@ -19,15 +19,19 @@ const config: Config = {
     },
     extend: {
       fontFamily: {
+        mono: [
+          'var(--font-ibm-plex-mono)',
+          'IBM Plex Mono',
+          'Menlo',
+          'Monaco',
+          'Courier New',
+          'monospace',
+        ],
         sans: [
-          'Inter',
+          'var(--font-ibm-plex-mono)',
+          'IBM Plex Mono',
           'system-ui',
           '-apple-system',
-          'BlinkMacSystemFont',
-          '"Segoe UI"',
-          'Roboto',
-          '"Helvetica Neue"',
-          'Arial',
           'sans-serif',
         ],
       },
