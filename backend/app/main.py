@@ -12,8 +12,9 @@ import logging
 
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.api.v1 import router as api_v1_router
-from app.core.middleware import SecurityHeadersMiddleware, RateLimitMiddleware
+# TODO: Uncomment when API routes are implemented
+# from app.api.v1 import router as api_v1_router
+# from app.core.middleware import SecurityHeadersMiddleware, RateLimitMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -88,10 +89,12 @@ app.add_middleware(
 )
 
 # Security Headers
-app.add_middleware(SecurityHeadersMiddleware)
+# TODO: Uncomment when middleware is implemented
+# app.add_middleware(SecurityHeadersMiddleware)
 
 # Rate Limiting
-app.add_middleware(RateLimitMiddleware)
+# TODO: Uncomment when middleware is implemented
+# app.add_middleware(RateLimitMiddleware)
 
 # GZip Compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -122,7 +125,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # Include API routers
-app.include_router(api_v1_router, prefix="/api/v1")
+# TODO: Uncomment when API routes are implemented
+# app.include_router(api_v1_router, prefix="/api/v1")
 
 
 @app.get("/", tags=["health"])

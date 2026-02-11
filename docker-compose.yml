@@ -13,7 +13,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agentnexus"]
       interval: 10s
@@ -50,11 +49,6 @@ services:
       - qdrant_data:/qdrant/storage
     environment:
       QDRANT__SERVICE__GRPC_PORT: 6334
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       - agent-nexus-network
 
@@ -105,7 +99,7 @@ services:
       redis:
         condition: service_healthy
       qdrant:
-        condition: service_healthy
+        condition: service_started
     networks:
       - agent-nexus-network
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -130,7 +124,7 @@ services:
       - backend
     networks:
       - agent-nexus-network
-    command: pnpm dev
+    command: npm run dev
 
   # Celery Worker (for async tasks)
   celery-worker:

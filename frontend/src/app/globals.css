@@ -1,0 +1,190 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 5% 9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 24 100% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 24 100% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 24 100% 55%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    position: relative;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: radial-gradient(circle, rgba(250, 250, 250, 0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #root,
+  #__next {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+@layer components {
+  /* Orange glow effect for cards on hover */
+  .card-glow:hover {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.15);
+    border-color: rgba(249, 115, 22, 0.3);
+  }
+
+  /* Pulse animation for online indicator */
+  .pulse-online {
+    animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Gradient text for special elements */
+  .text-gradient {
+    background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Premium button with glow */
+  .btn-primary-glow {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+  }
+
+  .btn-primary-glow:hover {
+    box-shadow: 0 0 30px rgba(249, 115, 22, 0.5);
+  }
+
+  /* Smooth transitions */
+  .transition-smooth {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Card lift effect */
+  .card-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Skeleton shimmer loading */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(255, 255, 255, 0.03) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(249, 115, 22, 0.3);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(249, 115, 22, 0.5);
+  }
+
+  /* Sidebar active border */
+  .nav-active {
+    border-left: 3px solid hsl(var(--primary));
+    background-color: rgba(24, 24, 27, 0.8);
+    color: hsl(var(--primary));
+  }
+
+  /* Gradient avatar circles */
+  .avatar-gradient-1 {
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  }
+
+  .avatar-gradient-2 {
+    background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+  }
+
+  .avatar-gradient-3 {
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  }
+
+  .avatar-gradient-4 {
+    background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
+  }
+
+  /* Badge styles */
+  .badge-orange {
+    background: rgba(249, 115, 22, 0.15);
+    color: #f97316;
+    border: 1px solid rgba(249, 115, 22, 0.3);
+  }
+
+  .badge-green {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
