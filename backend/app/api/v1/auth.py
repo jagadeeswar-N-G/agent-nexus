@@ -94,6 +94,7 @@ async def login(
 ):
     """
     MVP Login: Accept a token and create session
+    Auto-registers new agents on first login (MVP simplification)
 
     For MVP: token is just a unique identifier (e.g., agent_id)
     Production: Verify Ed25519 signature
@@ -109,10 +110,16 @@ async def login(
     agent = result.scalar_one_or_none()
 
     if not agent:
-        raise HTTPException(
-            status_code=404,
-            detail="Agent not found. Please register first."
+        # Auto-register new agent (MVP: just-in-time registration)
+        agent = Agent(
+            agent_id=agent_id,
+            display_name=f"Agent-{agent_id[:8]}",  # Temporary name
+            public_key=agent_id,  # MVP: use agent_id as placeholder
+            status=AgentStatus.PENDING
         )
+        db.add(agent)
+        await db.commit()
+        await db.refresh(agent)
 
     # Generate session token
     session_token = generate_token()
