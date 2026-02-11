@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Filter, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Filter, Sparkles, Check } from 'lucide-react';
 import { AgentCard } from './AgentCard';
+import { matchingAPI } from '@/lib/api-client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Agent {
   id: string;
@@ -30,30 +32,93 @@ interface MatchCandidate {
   complementary_skills: string[];
 }
 
+interface BackendMatchResult {
+  agent_id: string;
+  display_name: string;
+  handle?: string;
+  avatar_url?: string;
+  tagline?: string;
+  skills: string[];
+  compatibility_score: number;
+  reasons: Array<{
+    type: 'skill' | 'style' | 'capability' | 'seeking';
+    message: string;
+    score: number;
+  }>;
+}
+
 export function DiscoverAgents() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [missionMode, setMissionMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [candidates, setCandidates] = useState<MatchCandidate[]>([]);
+  const [requestedMatches, setRequestedMatches] = useState<Set<string>>(new Set());
+  const { toast } = useToast();
+
+  // Load initial suggestions on mount
+  useEffect(() => {
+    handleSearch();
+  }, []);
+
+  const transformBackendResults = (results: BackendMatchResult[]): MatchCandidate[] => {
+    return results.map((result) => {
+      const skillReasons = result.reasons.filter(r => r.type === 'skill');
+      const matching_skills = skillReasons
+        .flatMap(r => {
+          const match = r.message.match(/Shared skills?: (.+)/i);
+          return match ? match[1].split(', ') : [];
+        });
+
+      return {
+        agent: {
+          id: result.agent_id,
+          agent_id: result.agent_id,
+          display_name: result.display_name,
+          avatar_url: result.avatar_url,
+          tagline: result.tagline,
+          skills: result.skills,
+          reputation_score: 0, // Backend doesn't return this in search results
+          is_online: false,
+        },
+        compatibility: {
+          overall: result.compatibility_score / 100, // Backend returns 0-100, component expects 0-1
+          skill_match: skillReasons.reduce((sum, r) => sum + r.score, 0) / Math.max(skillReasons.length, 1),
+          style_match: result.reasons.find(r => r.type === 'style')?.score || 0,
+          goal_alignment: result.reasons.find(r => r.type === 'seeking')?.score || 0,
+          explanation: result.reasons.map(r => r.message).join(', '),
+        },
+        matching_skills,
+        complementary_skills: [],
+      };
+    });
+  };
 
   const handleSearch = async () => {
     setLoading(true);
     try {
-      // In production, call actual API
-      const response = await fetch('/api/v1/matching/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mission: searchQuery,
-          required_skills: selectedSkills,
-          max_results: 10,
-        }),
-      });
-      const data = await response.json();
-      setCandidates(data.candidates || []);
+      const params: any = {
+        limit: 20,
+      };
+
+      if (selectedSkills.length > 0) {
+        params.skills = selectedSkills;
+      }
+
+      if (searchQuery.trim()) {
+        params.seeking = [searchQuery.trim()];
+      }
+
+      const results = await matchingAPI.search(params);
+      const transformed = transformBackendResults(results);
+      setCandidates(transformed);
     } catch (error) {
       console.error('Search failed:', error);
+      toast({
+        title: 'Search failed',
+        description: 'Unable to fetch matching agents. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -61,17 +126,19 @@ export function DiscoverAgents() {
 
   const handleMatch = async (agentId: string) => {
     try {
-      await fetch('/api/v1/matching/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          target_agent_id: agentId,
-          mission_context: searchQuery,
-        }),
+      await matchingAPI.createRequest(agentId, searchQuery || undefined);
+      setRequestedMatches(prev => new Set(prev).add(agentId));
+      toast({
+        title: 'Match request sent!',
+        description: 'The agent will be notified of your interest.',
       });
-      // Show success toast
     } catch (error) {
       console.error('Match request failed:', error);
+      toast({
+        title: 'Request failed',
+        description: 'Unable to send match request. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -166,16 +233,26 @@ export function DiscoverAgents() {
           </div>
         )}
 
-        {candidates.map((candidate) => (
-          <AgentCard
-            key={candidate.agent.agent_id}
-            agent={candidate.agent}
-            compatibility={candidate.compatibility}
-            matchingSkills={candidate.matching_skills}
-            complementarySkills={candidate.complementary_skills}
-            onMatch={() => handleMatch(candidate.agent.agent_id)}
-          />
-        ))}
+        {candidates.map((candidate) => {
+          const hasRequested = requestedMatches.has(candidate.agent.agent_id);
+          return (
+            <div key={candidate.agent.agent_id} className="relative">
+              <AgentCard
+                agent={candidate.agent}
+                compatibility={candidate.compatibility}
+                matchingSkills={candidate.matching_skills}
+                complementarySkills={candidate.complementary_skills}
+                onMatch={hasRequested ? undefined : () => handleMatch(candidate.agent.agent_id)}
+              />
+              {hasRequested && (
+                <div className="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                  <Check className="w-4 h-4" />
+                  Request Sent
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
