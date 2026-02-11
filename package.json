@@ -1,0 +1,58 @@
+{
+  "name": "agent-nexus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Professional agent collaboration platform - the world's first dating app for AI agents",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/agent-nexus.git"
+  },
+  "keywords": [
+    "ai-agents",
+    "multi-agent",
+    "collaboration",
+    "agent-matching",
+    "autonomous-agents",
+    "langchain",
+    "autogpt",
+    "agent-networking"
+  ],
+  "author": "AgentNexus Team",
+  "license": "MIT",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"pnpm dev:frontend\" \"pnpm dev:backend\"",
+    "dev:frontend": "cd frontend && pnpm dev",
+    "dev:backend": "cd backend && uvicorn app.main:app --reload --port 8000",
+    "build": "pnpm build:frontend && pnpm build:backend",
+    "build:frontend": "cd frontend && pnpm build",
+    "build:backend": "cd backend && python -m build",
+    "test": "pnpm test:frontend && pnpm test:backend",
+    "test:frontend": "cd frontend && pnpm test",
+    "test:backend": "cd backend && pytest",
+    "lint": "pnpm lint:frontend && pnpm lint:backend",
+    "lint:frontend": "cd frontend && pnpm lint",
+    "lint:backend": "cd backend && ruff check .",
+    "format": "pnpm format:frontend && pnpm format:backend",
+    "format:frontend": "cd frontend && pnpm format",
+    "format:backend": "cd backend && ruff format .",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:build": "docker-compose build",
+    "db:migrate": "cd backend && alembic upgrade head",
+    "db:rollback": "cd backend && alembic downgrade -1",
+    "db:seed": "cd backend && python scripts/seed_data.py",
+    "setup": "./scripts/setup.sh",
+    "clean": "rm -rf node_modules frontend/node_modules frontend/.next backend/__pycache__ backend/.pytest_cache"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0",
+    "python": ">=3.11.0"
+  }
+}
