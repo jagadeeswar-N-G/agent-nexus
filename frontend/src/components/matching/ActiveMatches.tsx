@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Heart, X, MessageSquare, Clock, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { matchingAPI, collaborationsAPI } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
@@ -124,76 +125,124 @@ export function ActiveMatches() {
   const accepted = matches.filter(m => m.status === 'accepted');
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="space-y-6"
+    >
       {/* Header with tabs */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Your Matches</h2>
+        <motion.h2
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="text-2xl font-bold"
+        >
+          Your Matches
+        </motion.h2>
         <div className="flex gap-2 rounded-lg bg-zinc-900 p-1">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setActiveTab('pending')}
             className={`px-4 py-2 rounded-md text-sm transition-colors ${
               activeTab === 'pending'
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-primary text-primary-foreground shadow-lg'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             Pending ({pendingReceived.length + pendingSent.length})
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setActiveTab('accepted')}
             className={`px-4 py-2 rounded-md text-sm transition-colors ${
               activeTab === 'accepted'
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-primary text-primary-foreground shadow-lg'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             Accepted ({accepted.length})
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setActiveTab('all')}
             className={`px-4 py-2 rounded-md text-sm transition-colors ${
               activeTab === 'all'
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-primary text-primary-foreground shadow-lg'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             All
-          </button>
+          </motion.button>
         </div>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-48 bg-zinc-900 rounded-lg animate-pulse" />
-          ))}
-        </div>
-      ) : filteredMatches.length === 0 ? (
-        <div className="rounded-lg border border-border bg-zinc-900 p-12 text-center">
-          <Heart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-lg font-medium mb-2">No matches yet</p>
-          <p className="text-sm text-muted-foreground">
-            {activeTab === 'pending'
-              ? 'You have no pending match requests.'
-              : activeTab === 'accepted'
-              ? 'You have no accepted matches yet. Accept some match requests!'
-              : 'Start discovering agents to find your perfect collaboration partner.'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredMatches.map((match) => (
-            <MatchCard
-              key={match.id}
-              match={match}
-              onAccept={() => handleRespond(match.id, true)}
-              onReject={() => handleRespond(match.id, false)}
-              onStartDate={() => handleStartDate(match)}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+      <AnimatePresence mode="wait">
+        {loading ? (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          >
+            {[1, 2, 3, 4].map((i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.1 }}
+                className="h-48 bg-zinc-900 rounded-lg animate-pulse"
+              />
+            ))}
+          </motion.div>
+        ) : filteredMatches.length === 0 ? (
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="rounded-lg border border-border bg-zinc-900 p-12 text-center"
+          >
+            <Heart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-lg font-medium mb-2">No matches yet</p>
+            <p className="text-sm text-muted-foreground">
+              {activeTab === 'pending'
+                ? 'You have no pending match requests.'
+                : activeTab === 'accepted'
+                ? 'You have no accepted matches yet. Accept some match requests!'
+                : 'Start discovering agents to find your perfect collaboration partner.'}
+            </p>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="matches"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          >
+            {filteredMatches.map((match, index) => (
+              <motion.div
+                key={match.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <MatchCard
+                  match={match}
+                  onAccept={() => handleRespond(match.id, true)}
+                  onReject={() => handleRespond(match.id, false)}
+                  onStartDate={() => handleStartDate(match)}
+                />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -267,30 +316,36 @@ function MatchCard({ match, onAccept, onReject, onStartDate }: MatchCardProps) {
           {/* Actions */}
           {match.status === 'pending' && !match.is_initiator && (
             <div className="flex gap-2">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={onAccept}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 hover:shadow-lg transition-all"
               >
                 <Heart className="w-4 h-4" />
                 Accept
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onReject}
                 className="px-4 py-2 bg-zinc-800 text-foreground rounded-md hover:bg-zinc-700 transition-colors"
               >
                 <X className="w-4 h-4" />
-              </button>
+              </motion.button>
             </div>
           )}
 
           {match.status === 'accepted' && (
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02, boxShadow: '0 10px 40px rgba(168, 85, 247, 0.4)' }}
+              whileTap={{ scale: 0.98 }}
               onClick={onStartDate}
               className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-md hover:from-purple-700 hover:to-pink-700 transition-all"
             >
               <MessageSquare className="w-4 h-4" />
               Start Collaboration
-            </button>
+            </motion.button>
           )}
         </div>
       </div>

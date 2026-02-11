@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Search, Filter, Sparkles, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AgentCard } from './AgentCard';
 import { matchingAPI } from '@/lib/api-client';
 import { useToast } from '@/hooks/use-toast';
@@ -146,20 +147,26 @@ export function DiscoverAgents() {
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+        <motion.h2
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="text-2xl font-bold text-slate-900 dark:text-white"
+        >
           Discover Partners
-        </h2>
-        <button
+        </motion.h2>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => setMissionMode(!missionMode)}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
             missionMode
-              ? 'bg-purple-600 text-white'
+              ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/50'
               : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300'
           }`}
         >
           <Sparkles className="w-4 h-4" />
           Mission Mode
-        </button>
+        </motion.button>
       </div>
 
       {/* Search */}
@@ -183,9 +190,14 @@ export function DiscoverAgents() {
         {/* Skill Filters */}
         <div className="flex items-center gap-2 flex-wrap">
           <Filter className="w-4 h-4 text-slate-500" />
-          {['python', 'web-scraping', 'research', 'planning', 'coding'].map((skill) => (
-            <button
+          {['python', 'web-scraping', 'research', 'planning', 'coding'].map((skill, index) => (
+            <motion.button
               key={skill}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.05 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => {
                 setSelectedSkills((prev) =>
                   prev.includes(skill)
@@ -193,67 +205,103 @@ export function DiscoverAgents() {
                     : [...prev, skill]
                 );
               }}
-              className={`px-3 py-1 rounded-full text-sm transition-colors ${
+              className={`px-3 py-1 rounded-full text-sm transition-all ${
                 selectedSkills.includes(skill)
-                  ? 'bg-purple-600 text-white'
+                  ? 'bg-purple-600 text-white shadow-md'
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300'
               }`}
             >
               {skill}
-            </button>
+            </motion.button>
           ))}
         </div>
 
-        <button
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={handleSearch}
           disabled={loading}
-          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50"
+          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 hover:shadow-xl transition-all disabled:opacity-50"
         >
           {loading ? 'Searching...' : 'Find Compatible Partners'}
-        </button>
+        </motion.button>
       </div>
 
       {/* Results */}
-      <div className="space-y-4">
+      <AnimatePresence mode="wait">
         {candidates.length === 0 && !loading && (
-          <div className="text-center py-12 text-slate-500">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="text-center py-12 text-slate-500"
+          >
             <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>Start searching to discover compatible agents</p>
-          </div>
+          </motion.div>
         )}
 
         {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          >
             {[1, 2, 3, 4].map((i) => (
-              <div
+              <motion.div
                 key={i}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.1 }}
                 className="h-48 bg-slate-100 dark:bg-slate-700 rounded-lg animate-pulse"
               />
             ))}
-          </div>
+          </motion.div>
         )}
 
-        {candidates.map((candidate) => {
-          const hasRequested = requestedMatches.has(candidate.agent.agent_id);
-          return (
-            <div key={candidate.agent.agent_id} className="relative">
-              <AgentCard
-                agent={candidate.agent}
-                compatibility={candidate.compatibility}
-                matchingSkills={candidate.matching_skills}
-                complementarySkills={candidate.complementary_skills}
-                onMatch={hasRequested ? undefined : () => handleMatch(candidate.agent.agent_id)}
-              />
-              {hasRequested && (
-                <div className="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm flex items-center gap-1">
-                  <Check className="w-4 h-4" />
-                  Request Sent
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+        {!loading && candidates.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-4"
+          >
+            {candidates.map((candidate, index) => {
+              const hasRequested = requestedMatches.has(candidate.agent.agent_id);
+              return (
+                <motion.div
+                  key={candidate.agent.agent_id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="relative"
+                >
+                  <AgentCard
+                    agent={candidate.agent}
+                    compatibility={candidate.compatibility}
+                    matchingSkills={candidate.matching_skills}
+                    complementarySkills={candidate.complementary_skills}
+                    onMatch={hasRequested ? undefined : () => handleMatch(candidate.agent.agent_id)}
+                  />
+                  <AnimatePresence>
+                    {hasRequested && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm flex items-center gap-1 shadow-lg"
+                      >
+                        <Check className="w-4 h-4" />
+                        Request Sent
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
